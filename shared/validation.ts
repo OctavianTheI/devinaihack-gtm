@@ -12,6 +12,10 @@ export const scoresSchema = z.object({
   technicalAnswers: z.number().min(0).max(100),
 });
 
+// Uploaded script text. Bounded so a paste can't blow the model's context;
+// ~20k chars is a very long call script already.
+export const scriptTextSchema = z.string().trim().min(20, "Script is too short to grade against").max(20_000, "Script must be under 20,000 characters");
+
 export const divergenceSchema = z.object({
   scriptStep: z.string().min(1),
   whatTheyDid: z.string().min(1),
@@ -35,6 +39,7 @@ export const trainingSessionInputSchema = z.object({
   scores: scoresSchema,
   divergences: z.array(divergenceSchema),
   summary: z.string(),
+  scriptSimilarity: z.number().min(0).max(100).optional(),
 });
 
 export type TrainingSessionInputParsed = z.infer<typeof trainingSessionInputSchema>;

@@ -26,6 +26,21 @@ export const RUBRIC = {
   },
 } as const;
 
+/** The four criteria every session is graded on (= the keys of RUBRIC).
+ * Kept separate from `keyof Scores`, which also includes the optional
+ * scriptSimilarity. */
+export const CORE_CRITERIA = ["closeRate", "objectionHandling", "scriptAdherence", "technicalAnswers"] as const;
+export type CoreCriterion = (typeof CORE_CRITERIA)[number];
+
+// Extra criterion graded only when a manager has uploaded the team's actual
+// script (Script in types.ts). Deliberately NOT part of RUBRIC so consumers
+// that iterate RUBRIC's keys keep rendering exactly the four core scores.
+export const SCRIPT_SIMILARITY_CRITERION = {
+  label: "Script similarity",
+  description:
+    "How closely the call followed the team's uploaded script specifically — its talking points, key phrases, and ordering — not just the generic step list. 100 = the script was followed faithfully; a low score means large sections were skipped or replaced.",
+} as const;
+
 export const SCRIPT_STEPS = [
   "Opening",
   "Discovery",

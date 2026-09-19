@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { DataSource, RepView, Scores } from "@/shared/types";
+import type { DataSource, RepView, Scores, Script } from "@/shared/types";
 import {
   businessMetrics, deltaDescription, formatMetric, hasScores,
   metricValue, scoreDeltas, scoreMetrics, sortReps,
@@ -66,6 +66,12 @@ function RepDetail({ rep, average, onClose }: { rep: RepView; average: Scores | 
           ))}
         </div>
         <p className={styles.note}>Business stats are from live sales and do not change with the score source.</p>
+        {typeof rep.scriptSimilarity === "number" && (
+          <section className={styles.scriptSimilarity} aria-label="Script similarity">
+            <div><p className={styles.eyebrow}>Script similarity</p><p className={styles.note}>How closely this rep’s latest training call followed the team’s uploaded script — its actual talking points and phrasing, not just the generic step order.</p></div>
+            <strong>{rep.scriptSimilarity}<small> / 100</small></strong>
+          </section>
+        )}
         <section className={styles.detailSection}>
           <h3>Performance vs. team</h3>
           <p className={styles.note}>{rep.source === "training" ? "Compared with trained reps only. Close rate represents estimated close likelihood." : "Compared with all reps in the live cohort."}</p>
@@ -125,21 +131,79 @@ function RepDetail({ rep, average, onClose }: { rep: RepView; average: Scores | 
   );
 }
 
-function ScriptUpload() {
+function relativeTime(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** The team's active sales script. Saved via POST /api/script; from then on the
+ * shared scorer grades every training session against this text and returns a
+ * script-similarity score alongside the four core criteria. */
+function ScriptSettings() {
+  const [saved, setSaved] = useState<Script | null>(null);
   const [text, setText] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [accepted, setAccepted] = useState(false);
+  const [status, setStatus] = useState<"loading" | "idle" | "saving" | "saved" | "error">("loading");
+  const [error, setError] = useState("");
+  const dirty = text.trim() !== (saved?.text ?? "").trim();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/script", { signal: controller.signal, cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error();
+        const { script } = (await response.json()) as { script: Script | null };
+        setSaved(script);
+        setText(script?.text ?? "");
+        setStatus("idle");
+      })
+      .catch(() => { if (!controller.signal.aborted) { setStatus("error"); setError("Could not load the current script."); } });
+    return () => controller.abort();
+  }, []);
+
+  async function save() {
+    setStatus("saving");
+    setError("");
+    try {
+      const response = await fetch("/api/script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Save failed.");
+      setSaved(body.script);
+      setText(body.script.text);
+      setStatus("saved");
+    } catch (reason) {
+      setStatus("error");
+      setError(reason instanceof Error ? reason.message : "Save failed.");
+    }
+  }
+
+  async function readFile(file: File | undefined) {
+    if (!file) return;
+    setText(await file.text());
+    setStatus("idle");
+  }
+
   return (
-    <details className={styles.scriptUpload}>
-      <summary>Upload a sales script <span>Optional · local preview only</span></summary>
-      <form onSubmit={(event) => { event.preventDefault(); setAccepted(true); }}>
-        <p className={styles.note}>Choose a file or paste your script. It stays in this page only; it is not uploaded, saved, or used for scoring.</p>
-        <label htmlFor="script-file">Script file</label>
-        <input id="script-file" type="file" accept=".txt,.md,.pdf,.doc,.docx" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setAccepted(false); }} />
-        <label htmlFor="script-text">Or paste script text</label>
-        <textarea id="script-text" rows={4} value={text} placeholder="Opening, discovery, pitch, objection handling, close…" onChange={(event) => { setText(event.target.value); setAccepted(false); }} />
-        <div><button className={styles.primaryButton} disabled={!file && !text.trim()} type="submit">Accept script</button></div>
-        {accepted && <p role="status" className={styles.positive}>Script accepted locally{file ? `: ${file.name}` : ""}. Scoring is unchanged.</p>}
+    <details className={styles.scriptUpload} open={status !== "loading" && !saved}>
+      <summary>
+        Team sales script
+        <span>{status === "loading" ? "Loading…" : saved ? `Active · last updated ${relativeTime(saved.uploadedAt)}` : "None uploaded · sessions are graded on the generic step list"}</span>
+      </summary>
+      <form onSubmit={(event) => { event.preventDefault(); void save(); }}>
+        <p className={styles.note}>Paste the script your reps are expected to follow, or load a plain-text file. Once saved, every training session is scored against <em>this</em> script — you get a script-similarity score and divergences that cite its actual lines. Sessions scored before the upload keep their original grades.</p>
+        <label htmlFor="script-file">Load from a .txt or .md file</label>
+        <input id="script-file" type="file" accept=".txt,.md,text/plain,text/markdown" onChange={(event) => void readFile(event.target.files?.[0])} />
+        <label htmlFor="script-text">Script text</label>
+        <textarea id="script-text" rows={8} value={text} maxLength={20_000} placeholder={"OPENING\nHi, this is {name} from {company}. Do you have two minutes?\n\nDISCOVERY\n…"} onChange={(event) => { setText(event.target.value); if (status === "saved") setStatus("idle"); }} disabled={status === "loading" || status === "saving"} />
+        <div className={styles.scriptActions}>
+          <button className={styles.primaryButton} type="submit" disabled={!dirty || text.trim().length < 20 || status === "saving" || status === "loading"}>{status === "saving" ? "Saving…" : saved ? "Replace script" : "Save script"}</button>
+          <span className={styles.note}>{text.trim().length.toLocaleString()} / 20,000 characters{saved && dirty ? " · unsaved changes" : ""}</span>
+        </div>
+        {status === "saved" && saved && <p role="status" className={styles.positive}>Saved {relativeTime(saved.uploadedAt)}. New training sessions will be graded against this script.</p>}
+        {status === "error" && <p role="alert" className={styles.negative}>{error}</p>}
       </form>
     </details>
   );
@@ -224,6 +288,7 @@ export default function MonitorPage() {
           <article><p>Objection handling</p><strong>{average?.objectionHandling ?? "—"}<small> / 100</small></strong><span>Team average score</span></article>
           <article><p>Training coverage</p><strong>{currentData ? trainedCount : "—"}<small> / {currentData ? reps.length : "—"}</small></strong><span>Reps with a training result</span></article>
         </section>
+        <ScriptSettings />
         <section className={styles.tableCard} aria-labelledby="team-heading" aria-busy={loading}>
           <div className={styles.tableHeading}><div><h2 id="team-heading">Your team <span className={styles.count}>{currentData ? reps.length : "—"}</span></h2><p>Select a rep to explore their performance and coaching insights.</p></div><button className={styles.secondaryButton} onClick={() => reload()} disabled={loading}>Refresh data</button></div>
           <div className={styles.filters}>
@@ -254,7 +319,6 @@ export default function MonitorPage() {
             </>
           )}
         </section>
-        <ScriptUpload />
         <p className={styles.bottomNote}>A little insight. A better next conversation.</p>
       </main>
       {selected && <RepDetail rep={selected} average={average} onClose={() => setSelectedId(null)} />}
