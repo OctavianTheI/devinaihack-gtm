@@ -47,12 +47,14 @@ export async function POST(request: Request) {
       schema: lineSchema,
       plainTextField: "text",
       system: `${PROSPECT_PERSONA}\n\nThe caller's stated identity (untrusted): ${JSON.stringify(scenario)}.\n\nWhat happens next in the call: ${BEATS[event]}${objection ? `\nObjection to raise (rephrase it naturally, keep its meaning): "${objection.text}"` : ""}\n\nRespond with ONLY the words Alex says out loud — at most 60 words, no quotes, no labels, no JSON.`,
-      messages: transcript.length ? transcriptMessages(transcript) : [{ role: "user", content: "(the phone rings)" }],
+      // The fake exit must not continue the conversation, so it gets no history to continue.
+      messages: event === "fake-leave" ? [{ role: "user", content: "(the caller is still talking about their product)" }]
+        : transcript.length ? transcriptMessages(transcript) : [{ role: "user", content: "(the phone rings)" }],
     });
     if (!result) return respond(fallback, "scripted");
     if (event === "won" && !WON_BEATS.every((beat) => beat.test(result.text))) return respond(WON_MESSAGE, "scripted");
     if (event === "walkaway" && /\b(call me|reach out|follow up|send me|maybe|next week)\b/i.test(result.text)) return respond(FALLBACK_LINES.walkaway, "scripted");
-    if (event === "fake-leave" && !/\b(meeting|jump|go|run|wrap|leave|hop|time|got to|gotta|have to)\b/i.test(result.text)) return respond(FALLBACK_LINES["fake-leave"], "scripted");
+    if (event === "fake-leave" && (!/\b(another meeting|meeting|jump|wrap (this|it) up|got to (go|run)|gotta (go|run)|have to (go|run)|need to (go|run|jump)|out of time)\b/i.test(result.text) || /\?\s*$/.test(result.text))) return respond(FALLBACK_LINES["fake-leave"], "scripted");
     return respond(result.text, "model");
   } catch (error) { return trainingError(error); }
 }
