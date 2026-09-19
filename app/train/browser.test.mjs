@@ -32,7 +32,7 @@ async function pageForCall({ voice = false } = {}) {
     });
     await page.route("**/api/training/config", async route => {
       const response = await route.fetch();
-      await route.fulfill({ json: { ...await response.json(), voice: "browser" } });
+      await route.fulfill({ json: { ...await response.json(), voice: "browser", stt: "browser" } });
     });
   }
   await page.goto(`${base}/train`);

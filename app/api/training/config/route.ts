@@ -9,6 +9,7 @@ export async function GET() {
   return Response.json({
     objections,
     voice: process.env.ELEVENLABS_API_KEY ? "elevenlabs" : "browser",
+    stt: process.env.ELEVENLABS_API_KEY ? "elevenlabs" : "browser",
     replies: process.env.SCORER_API_KEY || process.env.OPENAI_API_KEY ? "model" : "scripted",
   }, { headers: { "Cache-Control": "no-store" } });
 }

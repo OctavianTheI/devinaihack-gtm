@@ -24,8 +24,19 @@ test("config includes varied shared objections, technical questions, and no cred
   assert.equal(config.objections[1].category, "technical");
   assert.equal(new Set(config.objections.map(item => item.category)).size, 5);
   assert.ok(["elevenlabs", "browser"].includes(config.voice));
+  assert.ok(["elevenlabs", "browser"].includes(config.stt));
   assert.ok(["model", "scripted"].includes(config.replies));
-  assert.deepEqual(Object.keys(config).sort(), ["objections", "replies", "voice"]);
+  assert.deepEqual(Object.keys(config).sort(), ["objections", "replies", "stt", "voice"]);
+});
+
+test("transcribe route validates content type, size, and origin before calling ElevenLabs", readOnly, async () => {
+  const send = (body, headers) => fetch(`${base}/api/training/transcribe`, { method: "POST", headers, body });
+  assert.equal((await send(new Uint8Array(2000), { "content-type": "audio/webm", origin: "https://untrusted.example" })).status, 403);
+  assert.equal((await send("{}", { "content-type": "application/json" })).status, 415);
+  assert.equal((await send(new Uint8Array(4_000_001), { "content-type": "audio/webm" })).status, 413);
+  const tiny = await send(new Uint8Array(200), { "content-type": "audio/webm" });
+  assert.ok([200, 503].includes(tiny.status));
+  if (tiny.status === 200) assert.deepEqual(await tiny.json(), { text: "" });
 });
 
 test("provider routes reject cross-origin and invalid input before model calls", readOnly, async () => {

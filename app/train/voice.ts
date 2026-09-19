@@ -25,7 +25,7 @@ export function listenToRep(options: {
   onTurn: (text: string) => void;
   onInterim: (text: string) => void;
   onError: (message: string) => void;
-}) {
+}): RepListener {
   const Constructor = recognitionConstructor();
   if (!Constructor) throw new Error("Speech recognition is not supported in this browser.");
   const recognition = new Constructor();
@@ -90,6 +90,124 @@ export function listenToRep(options: {
       recognition.onend = null;
       recognition.abort();
     },
+  };
+}
+
+export interface RepListener { flush: () => void; stop: () => void }
+
+const SPEECH_RMS = 0.015;
+const SILENCE_AFTER_SPEECH_MS = 1200;
+const MAX_UTTERANCE_MS = 45_000;
+
+export function recordingSupported(): boolean {
+  return typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia) && typeof AudioContext !== "undefined";
+}
+
+/** Records the rep with MediaRecorder, splits on pauses using mic volume, and
+ * transcribes each utterance server-side. Works in browsers whose
+ * SpeechRecognition object exists but has no speech backend (Opera, Brave, Arc). */
+export function recordRep(options: {
+  onTurn: (text: string) => void;
+  onInterim: (text: string) => void;
+  onError: (message: string) => void;
+}): RepListener {
+  let alive = true;
+  let stream: MediaStream | undefined;
+  let context: AudioContext | undefined;
+  let recorder: MediaRecorder | undefined;
+  let chunks: Blob[] = [];
+  let speaking = false;
+  let lastSpeech = 0;
+  let utteranceStart = 0;
+  let meter: ReturnType<typeof setInterval> | undefined;
+  let pendingUploads = 0;
+  const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find((type) => MediaRecorder.isTypeSupported(type));
+
+  const fail = (message: string) => {
+    if (!alive) return;
+    alive = false;
+    cleanup();
+    options.onError(message);
+  };
+  const cleanup = () => {
+    clearInterval(meter);
+    if (recorder && recorder.state !== "inactive") { recorder.ondataavailable = null; recorder.onstop = null; recorder.stop(); }
+    stream?.getTracks().forEach((track) => track.stop());
+    void context?.close().catch(() => {});
+  };
+  const upload = async (blob: Blob) => {
+    if (blob.size < 1000) return;
+    pendingUploads++;
+    options.onInterim("Transcribing…");
+    try {
+      const response = await fetch("/api/training/transcribe", {
+        method: "POST", headers: { "Content-Type": blob.type || "audio/webm" }, body: blob, signal: AbortSignal.timeout(25_000),
+      });
+      if (response.status === 503) throw new Error("unavailable");
+      if (!response.ok) throw new Error("failed");
+      const { text } = (await response.json()) as { text: string };
+      if (alive && text) options.onTurn(text);
+      else if (alive) options.onInterim("No speech detected. Try again a little louder.");
+    } catch (error) {
+      if (error instanceof Error && error.message === "unavailable") fail("Server transcription is unavailable. Continue with typed input.");
+      else if (alive) options.onInterim("That clip could not be transcribed. Please say it again.");
+    } finally {
+      pendingUploads--;
+      if (alive && pendingUploads === 0) options.onInterim("");
+    }
+  };
+  const startRecorder = () => {
+    if (!alive || !stream) return;
+    chunks = [];
+    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: recorder?.mimeType || mimeType || "audio/webm" });
+      const hadSpeech = speaking || Date.now() - lastSpeech < SILENCE_AFTER_SPEECH_MS * 2;
+      speaking = false;
+      if (hadSpeech) void upload(blob);
+      if (alive) startRecorder();
+    };
+    recorder.start();
+    utteranceStart = Date.now();
+  };
+  const endUtterance = () => {
+    if (recorder?.state === "recording") recorder.stop();
+  };
+
+  void (async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      if (!alive) { stream.getTracks().forEach((track) => track.stop()); return; }
+      context = new AudioContext();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 1024;
+      context.createMediaStreamSource(stream).connect(analyser);
+      const samples = new Float32Array(analyser.fftSize);
+      startRecorder();
+      meter = setInterval(() => {
+        analyser.getFloatTimeDomainData(samples);
+        let sum = 0;
+        for (const sample of samples) sum += sample * sample;
+        const rms = Math.sqrt(sum / samples.length);
+        const now = Date.now();
+        if (rms > SPEECH_RMS) {
+          if (!speaking) options.onInterim("Listening… keep going, I'll send it when you pause.");
+          speaking = true;
+          lastSpeech = now;
+        } else if (speaking && now - lastSpeech > SILENCE_AFTER_SPEECH_MS) {
+          endUtterance();
+        }
+        if (recorder?.state === "recording" && now - utteranceStart > MAX_UTTERANCE_MS) endUtterance();
+      }, 100);
+    } catch {
+      fail("Microphone access was denied or unavailable. Continue with typed input.");
+    }
+  })();
+
+  return {
+    flush: () => { if (speaking || Date.now() - lastSpeech < SILENCE_AFTER_SPEECH_MS) endUtterance(); },
+    stop: () => { alive = false; cleanup(); },
   };
 }
 

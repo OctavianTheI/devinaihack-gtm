@@ -4,11 +4,12 @@ import { useEffect, useEffectEvent, useReducer, useRef, useState } from "react";
 import type { ObjectionPrompt } from "@/shared/objections";
 import type { TrainingSession } from "@/shared/types";
 import { createCall, fallbackReply, reduceCall, type CallSettings } from "./session";
-import { listenToRep, speakProspect, speechRecognitionAvailable } from "./voice";
+import { listenToRep, recordRep, recordingSupported, speakProspect, speechRecognitionAvailable, type RepListener } from "./voice";
 
 export interface TrainingConfig {
   objections: ObjectionPrompt[];
   voice: "elevenlabs" | "browser";
+  stt?: "elevenlabs" | "browser";
   replies: "model" | "scripted";
 }
 export interface ScoredSession { session: TrainingSession; grading: "model" | "placeholder" }
@@ -96,18 +97,18 @@ export function useTrainingCall(config: TrainingConfig | null) {
   });
   useEffect(() => {
     if (!listening || mode !== "voice") return;
-    let input: ReturnType<typeof listenToRep> | undefined;
+    let input: RepListener | undefined;
+    const onError = (message: string) => { setMode("text"); setNotice(message); };
     try {
-      input = listenToRep({
-        pitch: phase === "pitch", onTurn: onVoiceTurn, onInterim: setInterim,
-        onError: (message) => { setMode("text"); setNotice(message); },
-      });
+      input = config?.stt === "elevenlabs" && recordingSupported()
+        ? recordRep({ onTurn: onVoiceTurn, onInterim: setInterim, onError })
+        : listenToRep({ pitch: phase === "pitch", onTurn: onVoiceTurn, onInterim: setInterim, onError });
       flushSpeech.current = input.flush;
     } catch {
-      queueMicrotask(() => { setMode("text"); setNotice("Speech recognition is not supported. Continue with typed input."); });
+      queueMicrotask(() => onError("Speech recognition is not supported. Continue with typed input."));
     }
     return () => { input?.stop(); flushSpeech.current = null; };
-  }, [listening, mode, phase, callId]);
+  }, [listening, mode, phase, callId, config?.stt]);
 
   const save = useEffectEvent(async (signal: AbortSignal) => {
     await Promise.resolve();
@@ -159,7 +160,8 @@ export function useTrainingCall(config: TrainingConfig | null) {
     browserVoice.current = false;
     try {
       if (mode === "voice") {
-        if (!speechRecognitionAvailable() || !navigator.mediaDevices?.getUserMedia) throw new Error("unsupported");
+        const supported = config.stt === "elevenlabs" ? recordingSupported() : speechRecognitionAvailable() && Boolean(navigator.mediaDevices?.getUserMedia);
+        if (!supported) throw new Error("unsupported");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach((track) => track.stop());
       }
