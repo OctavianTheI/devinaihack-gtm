@@ -20,8 +20,9 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
-import type { Rep, RepView, Scores, DataSource, TrainingSession } from "./types";
+import type { Rep, RepView, Scores, DataSource, Script, TrainingSession } from "./types";
 
 const MOCK_PATH = path.join(process.cwd(), "shared", "mock", "reps.json");
 const INDEX_KEY = "reps:index";
@@ -135,7 +136,11 @@ function average(scoresList: Scores[]): Scores | null {
 function toView(rep: Rep, source: DataSource): RepView {
   const hasTraining = rep.training !== null;
   const scores = source === "training" ? rep.training ?? rep.live : rep.live;
-  return { ...rep, source, scores, hasTraining };
+  const view: RepView = { ...rep, source, scores, hasTraining };
+  if (source === "training" && hasTraining && typeof rep.trainingScriptSimilarity === "number") {
+    view.scriptSimilarity = rep.trainingScriptSimilarity;
+  }
+  return view;
 }
 
 export async function listReps(source: DataSource): Promise<RepView[]> {
@@ -159,6 +164,16 @@ export async function teamAverage(source: DataSource): Promise<Scores | null> {
   return average(scoresList);
 }
 
+/** Mean script similarity over reps whose latest training session was graded
+ * against an uploaded script; null if none have been. Separate from
+ * teamAverage() so that function's return shape is unchanged. */
+export async function teamScriptSimilarity(): Promise<number | null> {
+  const values = (await getAll())
+    .map((r) => r.trainingScriptSimilarity)
+    .filter((v): v is number => typeof v === "number");
+  return values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+}
+
 export async function addTrainingSession(session: TrainingSession): Promise<RepView> {
   const rep = await getOne(session.repId);
   if (!rep) {
@@ -167,6 +182,10 @@ export async function addTrainingSession(session: TrainingSession): Promise<RepV
   const updated: Rep = {
     ...rep,
     training: session.scores,
+    // Latest session wins. A session graded with no active script clears any
+    // older value rather than leaving a stale grade against a script the rep
+    // wasn't measured on this time.
+    trainingScriptSimilarity: session.scriptSimilarity,
     // Training divergences replace prior training-derived ones but keep the
     // rep's live-call divergences alongside them, tagged by keeping whatever
     // was already there — simplest correct behavior for a hackathon: append
@@ -175,6 +194,27 @@ export async function addTrainingSession(session: TrainingSession): Promise<RepV
   };
   await redis().set(repKey(updated.id), updated);
   return toView(updated, "training");
+}
+
+// ---- Active sales script -------------------------------------------------
+// One script for the whole team, no history. Lives under its own key so the
+// scorer (which may run on any instance) always sees the latest upload.
+
+const SCRIPT_KEY = "script:active";
+
+export async function getActiveScript(): Promise<Script | null> {
+  return redis().get<Script>(SCRIPT_KEY);
+}
+
+/** Replace the active script. Returns the stored record (id + timestamp). */
+export async function setActiveScript(text: string): Promise<Script> {
+  const script: Script = { id: randomUUID(), text, uploadedAt: new Date().toISOString() };
+  await redis().set(SCRIPT_KEY, script);
+  return script;
+}
+
+export async function clearActiveScript(): Promise<void> {
+  await redis().del(SCRIPT_KEY);
 }
 
 export class StoreError extends Error {

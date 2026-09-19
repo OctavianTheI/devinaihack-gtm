@@ -7,8 +7,17 @@ export type DataSource = "live" | "training";
 export interface Scores {
   closeRate: number; // 0-100
   objectionHandling: number; // 0-100 (AI rated)
-  scriptAdherence: number; // 0-100
+  scriptAdherence: number; // 0-100 — generic step order (opening, discovery, pitch, ...)
   technicalAnswers: number; // 0-100
+}
+
+// The team's actual sales script, pasted in by a manager on the Monitor tab.
+// One active script at a time; uploading replaces it. When present, the
+// scorer grades against this text and returns scriptSimilarity.
+export interface Script {
+  id: string;
+  text: string;
+  uploadedAt: string; // ISO timestamp
 }
 
 export type Verdict = "good" | "neutral" | "bad";
@@ -29,6 +38,10 @@ export interface Rep {
   live: Scores; // from real calls (dummy data)
   training: Scores | null; // from voice-coach sessions, null until they train
   divergences: Divergence[]; // derived from live and/or training data
+  // 0-100, from the rep's latest training session, only if a Script was
+  // active when it was scored. Kept outside `Scores` so `keyof Scores` stays
+  // the four core criteria that every consumer iterates over.
+  trainingScriptSimilarity?: number;
 }
 
 // What GET /api/reps and GET /api/reps/:id return: a Rep plus the
@@ -38,6 +51,9 @@ export interface RepView extends Rep {
   source: DataSource;
   scores: Scores; // = live or training scores depending on `source`
   hasTraining: boolean;
+  // Resolved for the requested source: set when source === "training" and the
+  // rep's latest session was graded against an uploaded script; else absent.
+  scriptSimilarity?: number;
 }
 
 export interface TrainingTranscriptTurn {
@@ -56,6 +72,7 @@ export interface TrainingSession {
   scores: Scores; // closeRate here = AI's estimate of close likelihood
   divergences: Divergence[];
   summary: string;
+  scriptSimilarity?: number; // 0-100, only when a Script was active at scoring time
 }
 
 // Body B's Train tab POSTs to /api/training/sessions. `id` and `startedAt`

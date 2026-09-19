@@ -154,3 +154,10 @@
   .businessStats strong { font-size: 16px; }
   .comparisonFooter { flex-direction: column; gap: 3px; }
 }
+.scriptActions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.scriptActions .note { margin: 0; }
+.scriptUpload summary em, .scriptUpload .note em { font-style: normal; font-weight: 600; color: var(--ink); }
+.scriptSimilarity { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; padding: 16px 18px; border: 1px solid #dce6d0; background: #f0f5e9; border-radius: 10px; }
+.scriptSimilarity .note { margin-top: 4px; }
+.scriptSimilarity strong { font-size: 30px; font-weight: 600; letter-spacing: -.5px; white-space: nowrap; }
+.scriptSimilarity small { font-size: 13px; color: var(--muted); font-weight: 400; }
