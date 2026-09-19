@@ -63,7 +63,7 @@ export function useTrainingCall(config: TrainingConfig | null) {
     const fallback = `${FALLBACK_LINES.interrupt} ${objection.text}`;
     let text = fallback;
     try {
-      const line = await post<{ text: string }>("/api/training/prospect", { scenario: current.scenario, event: "interrupt", objectionId: objection.id, transcript: current.transcript }, AbortSignal.timeout(8000));
+      const line = await post<{ text: string }>("/api/training/prospect", { scenario: current.scenario, event: "interrupt", objectionId: objection.id, transcript: current.transcript }, AbortSignal.timeout(14_000));
       text = line.text || fallback;
     } catch { /* fallback line */ }
     let audio: Blob | null = null;
@@ -87,7 +87,7 @@ export function useTrainingCall(config: TrainingConfig | null) {
       if (ready) text = ready.text;
       else {
         try {
-          const line = await post<{ text: string; mode: "model" | "scripted" }>("/api/training/prospect", { scenario: current.scenario, event: work.event, objectionId: work.objectionId, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(9000)]));
+          const line = await post<{ text: string; mode: "model" | "scripted" }>("/api/training/prospect", { scenario: current.scenario, event: work.event, objectionId: work.objectionId, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(14_000)]));
           text = line.text || work.fallback;
         } catch {
           if (signal.aborted) return;
@@ -121,7 +121,7 @@ export function useTrainingCall(config: TrainingConfig | null) {
     try {
       response = await post("/api/training/reply", leaving
         ? { scenario: current.scenario, leaving: true, transcript: current.transcript }
-        : { scenario: current.scenario, objectionId: objection.id, nextObjectionId: nextObjection.id, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(10_000)]));
+        : { scenario: current.scenario, objectionId: objection.id, nextObjectionId: nextObjection.id, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(14_000)]));
     } catch {
       if (signal.aborted) return;
       setNotice("The model reply was unavailable. Continuing with clearly labeled scripted practice.");

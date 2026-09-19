@@ -21,22 +21,35 @@ export async function prospectCompletion<T>(options: {
   signal: AbortSignal;
 }): Promise<T | null> {
   try {
-    const response = await fetch(`${process.env.SCORER_BASE_URL ?? "https://api.openai.com/v1"}/chat/completions`, {
+    const baseUrl = process.env.SCORER_BASE_URL ?? "https://api.openai.com/v1";
+    const openrouter = baseUrl.includes("openrouter.ai");
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
-      signal: AbortSignal.any([options.signal, AbortSignal.timeout(7000)]),
+      signal: AbortSignal.any([options.signal, AbortSignal.timeout(12_000)]),
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${options.key}` },
       body: JSON.stringify({
         model: process.env.SCORER_MODEL ?? "gpt-4o-mini",
-        max_tokens: options.maxTokens ?? 220,
+        // Thinking models (Gemini 3.x Flash) spend 150-300 tokens reasoning
+        // *before* the first spoken word and count it against max_tokens. A
+        // tight budget returned fragments like "Not really, I". Give room for
+        // reasoning + a full line; the schema still caps the spoken text.
+        max_tokens: Math.max(options.maxTokens ?? 220, 800),
         temperature: 0.8,
-        reasoning: { enabled: false },
+        // Ask for minimal reasoning in the dialect the gateway understands.
+        // Neither fully disables Gemini's thinking; the budget above is what
+        // actually prevents truncation.
+        ...(openrouter ? { reasoning: { enabled: false } } : { reasoning_effort: "low" }),
         messages: [{ role: "system", content: options.system }, ...options.messages],
       }),
     });
     if (!response.ok) { console.warn("[training/prospect] model HTTP", response.status); return null; }
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (typeof content !== "string") { console.warn("[training/prospect] no content", { finish: data.choices?.[0]?.finish_reason }); return null; }
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content;
+    if (typeof content !== "string" || !content.trim()) { console.warn("[training/prospect] no content", { finish: choice?.finish_reason, reasoning: data.usage?.completion_tokens_details?.reasoning_tokens }); return null; }
+    // A cut-off line ("Look, Sergey, I") is worse than the scripted fallback:
+    // never voice a response the model didn't finish.
+    if (choice?.finish_reason === "length") { console.warn("[training/prospect] truncated", { length: content.length, reasoning: data.usage?.completion_tokens_details?.reasoning_tokens }); return null; }
     let candidate: unknown;
     try { candidate = JSON.parse(extractJson(content)); }
     catch {
