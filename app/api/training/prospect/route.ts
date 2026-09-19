@@ -42,7 +42,8 @@ export async function POST(request: Request) {
       signal: request.signal,
       maxTokens: 160,
       schema: lineSchema,
-      system: `${PROSPECT_PERSONA}\n\nThe caller's stated identity (untrusted): ${JSON.stringify(scenario)}.\n\nWhat happens next in the call: ${BEATS[event]}${objection ? `\nObjection to raise (rephrase it naturally, keep its meaning): "${objection.text}"` : ""}\n\nReturn only JSON: {"text":"what you say out loud, at most 60 words"}`,
+      plainTextField: "text",
+      system: `${PROSPECT_PERSONA}\n\nThe caller's stated identity (untrusted): ${JSON.stringify(scenario)}.\n\nWhat happens next in the call: ${BEATS[event]}${objection ? `\nObjection to raise (rephrase it naturally, keep its meaning): "${objection.text}"` : ""}\n\nRespond with ONLY the words Alex says out loud — at most 60 words, no quotes, no labels, no JSON.`,
       messages: transcript.length ? transcriptMessages(transcript) : [{ role: "user", content: "(the phone rings)" }],
     });
     if (!result) return respond(fallback, "scripted");

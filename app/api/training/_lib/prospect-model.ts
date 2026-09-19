@@ -15,6 +15,8 @@ export async function prospectCompletion<T>(options: {
   system: string;
   messages: { role: "user" | "assistant"; content: string }[];
   schema: ZodType<T>;
+  /** When the model answers in plain speech instead of JSON, wrap it as this field (single-line beats only). */
+  plainTextField?: string;
   maxTokens?: number;
   signal: AbortSignal;
 }): Promise<T | null> {
@@ -35,7 +37,13 @@ export async function prospectCompletion<T>(options: {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     if (typeof content !== "string") { console.warn("[training/prospect] no content", { finish: data.choices?.[0]?.finish_reason }); return null; }
-    const parsed = options.schema.safeParse(JSON.parse(extractJson(content)));
+    let candidate: unknown;
+    try { candidate = JSON.parse(extractJson(content)); }
+    catch {
+      if (!options.plainTextField) throw new Error("not JSON");
+      candidate = { [options.plainTextField]: content.replace(/^```[a-z]*\s*|\s*```$/g, "").replace(/^["“]|["”]$/g, "").trim() };
+    }
+    const parsed = options.schema.safeParse(candidate);
     if (!parsed.success) console.warn("[training/prospect] schema mismatch", { finish: data.choices?.[0]?.finish_reason, length: content.length, issues: parsed.error.issues.map((issue) => issue.path.join(".")) });
     return parsed.success ? parsed.data : null;
   } catch (error) {
