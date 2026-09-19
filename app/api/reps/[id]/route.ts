@@ -15,11 +15,11 @@ export async function GET(
 ) {
   const { id } = await params;
   const source = parseSource(req.nextUrl.searchParams.get("source"));
-  const rep = getRep(id, source);
+  const rep = await getRep(id, source);
   if (!rep) {
     return NextResponse.json({ error: `No rep with id "${id}"` }, { status: 404 });
   }
-  const average = teamAverage(source);
+  const average = await teamAverage(source);
   return NextResponse.json(
     { rep, teamAverage: average },
     { headers: { "Cache-Control": "no-store" } }

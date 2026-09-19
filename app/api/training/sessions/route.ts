@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   if (savedSessions.size >= 100) savedSessions.delete(savedSessions.keys().next().value!);
 
   try {
-    const rep = addTrainingSession(session);
+    const rep = await addTrainingSession(session);
     savedSessions.set(session.id, { signature, session, rep, expires: now + 15 * 60_000 });
     return NextResponse.json({ session, rep }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (err) {
