@@ -3,8 +3,8 @@
 import { useEffect, useEffectEvent, useReducer, useRef, useState } from "react";
 import type { ObjectionPrompt } from "@/shared/objections";
 import type { TrainingSession } from "@/shared/types";
-import { createCall, fallbackReply, reduceCall, type CallSettings } from "./session";
-import { listenToRep, recordRep, recordingSupported, speakProspect, speechRecognitionAvailable, type RepListener } from "./voice";
+import { createCall, fallbackReply, FALLBACK_LINES, reduceCall, type CallSettings } from "./session";
+import { listenToRep, prefetchSpeech, recordRep, recordingSupported, speakProspect, speechRecognitionAvailable, type RepListener } from "./voice";
 
 export interface TrainingConfig {
   objections: ObjectionPrompt[];
@@ -53,15 +53,55 @@ export function useTrainingCall(config: TrainingConfig | null) {
     return () => clearInterval(timer);
   }, [callId, phase]);
 
+  /** Interruption line + audio generated during the last seconds of the pitch so it fires instantly. */
+  const prefetched = useRef<{ callId: string; text: string; audio: Blob | null } | null>(null);
+  const prefetchInterrupt = useEffectEvent(async () => {
+    if (!call || call.phase !== "pitch" || prefetched.current?.callId === call.id) return;
+    const current = call;
+    prefetched.current = { callId: current.id, text: "", audio: null };
+    const objection = current.objections[0];
+    const fallback = `${FALLBACK_LINES.interrupt} ${objection.text}`;
+    let text = fallback;
+    try {
+      const line = await post<{ text: string }>("/api/training/prospect", { scenario: current.scenario, event: "interrupt", objectionId: objection.id, transcript: current.transcript }, AbortSignal.timeout(8000));
+      text = line.text || fallback;
+    } catch { /* fallback line */ }
+    let audio: Blob | null = null;
+    if (audioEnabled && config?.voice === "elevenlabs" && !browserVoice.current) audio = await prefetchSpeech(text, AbortSignal.timeout(8000));
+    if (prefetched.current?.callId === current.id) prefetched.current = { callId: current.id, text, audio };
+  });
+  useEffect(() => {
+    if (phase !== "pitch" || !call?.deadline) return;
+    const lead = Math.max(0, call.deadline - Date.now() - 8000);
+    const timer = setTimeout(() => void prefetchInterrupt(), lead);
+    return () => clearTimeout(timer);
+  }, [phase, callId, call?.deadline]);
+
   const runPending = useEffectEvent(async (signal: AbortSignal) => {
     if (!call?.pending) return;
     const current = call;
     const work = current.pending!;
+    if (work.kind === "line") {
+      let text = work.fallback;
+      const ready = work.event === "interrupt" && prefetched.current?.callId === current.id && prefetched.current.text ? prefetched.current : null;
+      if (ready) text = ready.text;
+      else {
+        try {
+          const line = await post<{ text: string; mode: "model" | "scripted" }>("/api/training/prospect", { scenario: current.scenario, event: work.event, objectionId: work.objectionId, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(9000)]));
+          text = line.text || work.fallback;
+        } catch {
+          if (signal.aborted) return;
+        }
+      }
+      if (!signal.aborted) dispatch({ type: "line", callId: current.id, pendingId: work.id, text, now: Date.now() });
+      return;
+    }
     if (work.kind === "speak") {
       if (audioEnabled) {
         try {
+          const cached = prefetched.current?.callId === current.id && prefetched.current.text === work.text ? prefetched.current.audio : null;
           await speakProspect(work.text, {
-            signal, provider: browserVoice.current ? "browser" : config?.voice ?? "browser",
+            signal, provider: browserVoice.current ? "browser" : config?.voice ?? "browser", audio: cached,
             onFallback: (message) => { browserVoice.current = true; setNotice(message); },
           });
         } catch {
@@ -75,9 +115,10 @@ export function useTrainingCall(config: TrainingConfig | null) {
       return;
     }
     const objection = current.objections[current.objectionIndex];
-    let response = fallbackReply(objection.category, work.text) as { reply: string; handled: boolean; mode: "model" | "scripted" };
+    const nextObjection = current.objections[(current.objectionIndex + 1) % current.objections.length];
+    let response = fallbackReply(objection.category, work.text, nextObjection) as { reply: string; handled: boolean; next?: string; mode: "model" | "scripted" };
     try {
-      response = await post("/api/training/reply", { scenario: current.scenario, objectionId: objection.id, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(10_000)]));
+      response = await post("/api/training/reply", { scenario: current.scenario, objectionId: objection.id, nextObjectionId: nextObjection.id, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(10_000)]));
     } catch {
       if (signal.aborted) return;
       setNotice("The model reply was unavailable. Continuing with clearly labeled scripted practice.");

@@ -260,19 +260,28 @@ function playAudio(blob: Blob, signal: AbortSignal): Promise<void> {
   });
 }
 
+/** Synthesize a line ahead of time; null on any failure so the caller just synthesizes live. */
+export async function prefetchSpeech(text: string, signal: AbortSignal): Promise<Blob | null> {
+  try {
+    const response = await fetch("/api/training/speech", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal,
+    });
+    return response.ok ? await response.blob() : null;
+  } catch { return null; }
+}
+
 export async function speakProspect(text: string, options: {
   signal: AbortSignal;
   provider: "elevenlabs" | "browser";
+  /** Pre-synthesized audio for exactly this text, if available. */
+  audio?: Blob | null;
   onFallback: (message: string) => void;
 }) {
   if (options.provider === "elevenlabs") {
     try {
-      const response = await fetch("/api/training/speech", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }), signal: AbortSignal.any([options.signal, AbortSignal.timeout(10_000)]),
-      });
-      if (!response.ok) throw new Error("ElevenLabs unavailable");
-      await playAudio(await response.blob(), options.signal);
+      const blob = options.audio ?? await prefetchSpeech(text, AbortSignal.any([options.signal, AbortSignal.timeout(10_000)]));
+      if (!blob) throw new Error("ElevenLabs unavailable");
+      await playAudio(blob, options.signal);
       return;
     } catch {
       if (options.signal.aborted) throw new DOMException("Aborted", "AbortError");

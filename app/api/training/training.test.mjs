@@ -39,8 +39,22 @@ test("transcribe route validates content type, size, and origin before calling E
   if (tiny.status === 200) assert.deepEqual(await tiny.json(), { text: "" });
 });
 
+test("prospect route phrases every beat, validates input, and falls back to scripted lines", readOnly, async () => {
+  const scenario = { repName: "Sarah Kim", company: "Northstar", offer: "CRM automation" };
+  const greeting = await post("prospect", { scenario, event: "greeting", transcript: [] });
+  assert.equal(greeting.status, 200);
+  const body = await greeting.json();
+  assert.ok(["model", "scripted"].includes(body.mode));
+  assert.ok(body.text.length > 0 && body.text.length <= 600);
+  const interrupt = await post("prospect", { scenario, event: "interrupt", objectionId: "obj-price-1", transcript: [{ speaker: "rep", text: "We save you hours every week.", atSec: 5 }] });
+  assert.equal(interrupt.status, 200);
+  if ((await interrupt.json()).mode === "scripted") assert.match(body.text, /Alex/);
+  assert.equal((await post("prospect", { scenario, event: "interrupt", objectionId: "nope", transcript: [] })).status, 400);
+  assert.equal((await post("prospect", { scenario, event: "dance", transcript: [] })).status, 400);
+});
+
 test("provider routes reject cross-origin and invalid input before model calls", readOnly, async () => {
-  for (const route of ["reply", "speech", "score", "sessions"]) {
+  for (const route of ["reply", "prospect", "speech", "score", "sessions"]) {
     assert.equal((await post(route, {}, { origin: "https://untrusted.example" })).status, 403);
     assert.equal((await post(route, {})).status, 400);
   }

@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    guardTrainingRequest(request, "score", 6);
+    guardTrainingRequest(request, "score", Number(process.env.TRAINING_SCORE_RATE_LIMIT) || 6);
     const input = await readTrainingBody(request, scoreRequestSchema);
     if (!getRep(input.repId, "live")) throw new TrainingRequestError("Unknown repId", 404);
     if (input.transcript.some((turn) => turn.atSec > input.durationSec + 1)) throw new TrainingRequestError("Transcript timestamps exceed the session duration");

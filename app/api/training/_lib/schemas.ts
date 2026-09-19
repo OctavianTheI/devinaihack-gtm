@@ -24,5 +24,6 @@ export const scoreRequestSchema = z.object({
 export const replyRequestSchema = z.object({
   scenario: scenarioSchema,
   objectionId: z.string().min(1).max(100),
+  nextObjectionId: z.string().min(1).max(100).optional(),
   transcript: transcriptSchema,
 });

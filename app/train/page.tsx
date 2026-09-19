@@ -80,10 +80,10 @@ export default function TrainPage() {
             <div className={styles.callBody}>
               <div className={styles.callHeading}>
                 <div><p className={styles.eyebrow}>{call ? phaseLabels[call.phase] : "Cold-call practice"}</p><h3>{call?.outcome === "won" ? "You won the practice deal." : active ? "Make the conversation yours." : "Ready when you are."}</h3></div>
-                {active && <div className={styles.timer} aria-label="Time remaining">{remaining === null ? "—" : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`}<small>{remaining === null ? "Prospect speaking" : "remaining"}</small></div>}
+                {active && <div className={styles.timer} aria-label="Time remaining">{remaining === null ? "⏸" : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`}<small>{remaining === null ? "paused · Alex's turn" : "your time left"}</small></div>}
               </div>
               <ol className={styles.phases} aria-label="Training phases">
-                {(["intro", "pitch", "challenge"] as const).map((phase, index) => <li key={phase} aria-current={call?.phase === phase ? "step" : undefined}><span>{index + 1}</span>{phase === "intro" ? "Introduce" : phase === "pitch" ? `Pitch · ${call?.pitchSec ?? pitchSec}s` : `Objections · ${call?.objectionSec ?? objectionSec}s`}</li>)}
+                {(["intro", "pitch", "challenge"] as const).map((phase, index) => <li key={phase} aria-current={call?.phase === phase ? "step" : undefined}><span>{index + 1}</span>{phase === "intro" ? "Introduce" : phase === "pitch" ? `Pitch · ${call?.pitchSec ?? pitchSec}s` : `Objections · ${call?.objectionSec ?? objectionSec}s of your time`}</li>)}
               </ol>
               {!call ? (
                 <div className={styles.startArea}>
@@ -99,14 +99,14 @@ export default function TrainPage() {
                 <>
                   <div className={styles.prospect} aria-live="polite"><span className={styles.avatar}>A</span><div><p>Alex · prospect</p><blockquote>{customer?.text}</blockquote></div></div>
                   {active && <>
-                    <div className={styles.callStatus} role="status"><span className={coach.listening ? styles.listeningDot : styles.thinkingDot} />{call.pending?.kind === "reply" ? "Alex is considering your answer…" : call.pending?.kind === "speak" ? coach.audioEnabled ? "Alex is speaking…" : "Alex’s reply is on screen" : coach.mode === "voice" ? "Your turn · listening" : "Your turn · type your response"}<span>{call.handledIds.length} / 2 objections addressed</span></div>
+                    <div className={styles.callStatus} role="status"><span className={coach.listening ? styles.listeningDot : styles.thinkingDot} />{call.pending?.kind === "reply" ? "Alex is considering your answer…" : call.pending?.kind === "line" ? "Alex is thinking…" : call.pending?.kind === "speak" ? coach.audioEnabled ? "Alex is speaking…" : "Alex’s reply is on screen" : coach.mode === "voice" ? "Your turn · listening" : "Your turn · type your response"}<span>{call.handledIds.length} / 2 objections addressed</span></div>
                     {coach.mode === "voice" ? <div className={styles.liveWords}><p>{coach.interim || (config?.stt === "elevenlabs" ? "Speak, then pause — your turn is transcribed when you stop." : "Your words will appear here as they’re recognized.")}</p><button className={styles.textButton} onClick={() => coach.setMode("text")}>Use typed input instead</button></div> : <form className={styles.responseForm} onSubmit={(event) => { event.preventDefault(); coach.send(draft); setDraft(""); }}><label htmlFor="rep-response">Your response</label><textarea id="rep-response" rows={3} maxLength={1200} value={draft} disabled={!coach.listening} onChange={(event) => setDraft(event.target.value)} placeholder={call.phase === "intro" ? `Hi, I’m ${call.scenario.repName.split(" ")[0]} from ${call.scenario.company}. We offer ${call.scenario.offer}…` : "Acknowledge the concern, answer it, and make the value concrete."} /><button className={styles.primaryButton} disabled={!coach.listening || !draft.trim()}>Send response</button></form>}
                     <div className={styles.callActions}><button className={styles.secondaryButton} onClick={coach.finish} disabled={!call.transcript.some((turn) => turn.speaker === "rep")}>End & score</button><button className={styles.textButton} onClick={() => { coach.reset(); setDraft(""); }}>Cancel call</button></div>
                   </>}
                 </>
               )}
               {coach.notice && <p className={styles.notice} role="status">{coach.notice}</p>}
-              {(config?.replies === "scripted" || call?.scripted) && <p className={styles.notice}>Scripted prospect fallback is active. Objection handling uses a simple practice heuristic, not a model assessment.</p>}
+              {(config?.replies === "scripted" || call?.scripted) && <p className={styles.notice}>Scripted prospect fallback is active: Alex uses fixed lines and a simple practice heuristic instead of the model. Configure SCORER_API_KEY for generated dialogue.</p>}
             </div>
             <p className={styles.photoCredit}>Illustrative photo by <a href="https://unsplash.com/de/fotos/two-women-sitting-beside-table-and-talking-LQ1t-8Ms5PY" target="_blank" rel="noreferrer">Christina @ wocintechchat.com / Unsplash</a>.</p>
           </section>
