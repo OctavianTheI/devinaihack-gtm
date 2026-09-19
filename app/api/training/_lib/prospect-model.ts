@@ -31,15 +31,25 @@ export async function prospectCompletion<T>(options: {
         messages: [{ role: "system", content: options.system }, ...options.messages],
       }),
     });
-    if (!response.ok) return null;
+    if (!response.ok) { console.warn("[training/prospect] model HTTP", response.status); return null; }
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    if (typeof content !== "string") return null;
-    const parsed = options.schema.safeParse(JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, "").trim()));
+    if (typeof content !== "string") { console.warn("[training/prospect] no content", { finish: data.choices?.[0]?.finish_reason }); return null; }
+    const parsed = options.schema.safeParse(JSON.parse(extractJson(content)));
+    if (!parsed.success) console.warn("[training/prospect] schema mismatch", { finish: data.choices?.[0]?.finish_reason, length: content.length, issues: parsed.error.issues.map((issue) => issue.path.join(".")) });
     return parsed.success ? parsed.data : null;
-  } catch {
+  } catch (error) {
+    console.warn("[training/prospect] failed", error instanceof Error ? error.name + ": " + error.message.slice(0, 80) : "unknown");
     return null;
   }
+}
+
+/** Models sometimes wrap JSON in fences or lead with a sentence; take the outermost object. */
+function extractJson(content: string): string {
+  const stripped = content.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  return start >= 0 && end > start ? stripped.slice(start, end + 1) : stripped;
 }
 
 export function transcriptMessages(transcript: { speaker: "rep" | "customer"; text: string }[], limit = 14) {
