@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { OBJECTIONS } from "@/shared/objections";
-import { fallbackReply } from "@/app/train/session";
+import { fallbackRecovery, fallbackReply } from "@/app/train/session";
 import { modelKey, PROSPECT_PERSONA, prospectCompletion, transcriptMessages } from "../_lib/prospect-model";
 import { guardTrainingRequest, readTrainingBody, trainingError, TrainingRequestError } from "../_lib/requests";
 import { replyRequestSchema } from "../_lib/schemas";
@@ -11,17 +11,32 @@ const replySchema = z.object({ reply: z.string().trim().min(1).max(300), handled
 export async function POST(request: Request) {
   try {
     guardTrainingRequest(request, "reply");
-    const { scenario, objectionId, nextObjectionId, transcript } = await readTrainingBody(request, replyRequestSchema);
+    const { scenario, objectionId, nextObjectionId, leaving, transcript } = await readTrainingBody(request, replyRequestSchema);
+    const latest = transcript.at(-1);
+    if (latest?.speaker !== "rep") throw new TrainingRequestError("The final turn must be a rep response");
+    const respond = (body: unknown) => Response.json(body, { headers: { "Cache-Control": "no-store" } });
+    const key = modelKey();
+
+    if (leaving) {
+      // Alex just pretended to hang up. Did the rep recover — ask for a next step, hold the line — or fold?
+      const fallback = fallbackRecovery(latest.text);
+      if (!key) return respond(fallback);
+      const result = await prospectCompletion({
+        key,
+        signal: request.signal,
+        schema: z.object({ handled: z.boolean() }),
+        maxTokens: 40,
+        system: `${PROSPECT_PERSONA}\n\nYou just told the caller you have to jump to another meeting — a test to see how they close. Judge their LAST message. "handled" is true only if they kept the call alive with something concrete: asked for a specific next step or time, asked one sharp closing question, or briefly summarized the value and asked for a commitment. Politely accepting the brush-off, apologizing for the interruption, or repeating the pitch is NOT handled.\n\nReturn only JSON: {"handled": boolean}`,
+        messages: transcriptMessages(transcript),
+      });
+      return respond(result ? { reply: "", next: "", handled: result.handled, mode: "model" } : fallback);
+    }
+
     const objection = OBJECTIONS.find((item) => item.id === objectionId);
     if (!objection) throw new TrainingRequestError("Unknown objection");
     const nextObjection = nextObjectionId ? OBJECTIONS.find((item) => item.id === nextObjectionId) : undefined;
     if (nextObjectionId && !nextObjection) throw new TrainingRequestError("Unknown next objection");
-    const latest = transcript.at(-1);
-    if (latest?.speaker !== "rep") throw new TrainingRequestError("The final turn must be a rep response");
     const fallback = fallbackReply(objection.category, latest.text, nextObjection);
-    const respond = (body: unknown) => Response.json(body, { headers: { "Cache-Control": "no-store" } });
-
-    const key = modelKey();
     if (!key) return respond(fallback);
     const result = await prospectCompletion({
       key,

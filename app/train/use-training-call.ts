@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useReducer, useRef, useState } from "react";
 import type { ObjectionPrompt } from "@/shared/objections";
 import type { TrainingSession } from "@/shared/types";
-import { createCall, fallbackReply, FALLBACK_LINES, reduceCall, type CallSettings } from "./session";
+import { createCall, fallbackRecovery, fallbackReply, FALLBACK_LINES, reduceCall, type CallSettings } from "./session";
 import { listenToRep, prefetchSpeech, recordRep, recordingSupported, speakProspect, speechRecognitionAvailable, type RepListener } from "./voice";
 
 export interface TrainingConfig {
@@ -114,11 +114,14 @@ export function useTrainingCall(config: TrainingConfig | null) {
       if (!signal.aborted) dispatch({ type: "spoken", callId: current.id, pendingId: work.id, now: Date.now() });
       return;
     }
+    const leaving = current.phase === "leaving";
     const objection = current.objections[current.objectionIndex];
     const nextObjection = current.objections[(current.objectionIndex + 1) % current.objections.length];
-    let response = fallbackReply(objection.category, work.text, nextObjection) as { reply: string; handled: boolean; next?: string; mode: "model" | "scripted" };
+    let response = (leaving ? fallbackRecovery(work.text) : fallbackReply(objection.category, work.text, nextObjection)) as { reply: string; handled: boolean; next?: string; mode: "model" | "scripted" };
     try {
-      response = await post("/api/training/reply", { scenario: current.scenario, objectionId: objection.id, nextObjectionId: nextObjection.id, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(10_000)]));
+      response = await post("/api/training/reply", leaving
+        ? { scenario: current.scenario, leaving: true, transcript: current.transcript }
+        : { scenario: current.scenario, objectionId: objection.id, nextObjectionId: nextObjection.id, transcript: current.transcript }, AbortSignal.any([signal, AbortSignal.timeout(10_000)]));
     } catch {
       if (signal.aborted) return;
       setNotice("The model reply was unavailable. Continuing with clearly labeled scripted practice.");

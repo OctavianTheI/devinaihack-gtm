@@ -10,7 +10,13 @@ import { useTrainingCall, type TrainingConfig } from "./use-training-call";
 import styles from "./page.module.css";
 
 const PHOTO = "https://images.unsplash.com/photo-1573497491208-6b1acb260507?auto=format&fit=crop&w=1400&q=85";
-const phaseLabels = { intro: "Introduce yourself", pitch: "Make your pitch", challenge: "Handle objections", closing: "Closing the call", complete: "Call complete" };
+const phaseLabels = { intro: "Introduce yourself", pitch: "Make your pitch", challenge: "Handle objections", leaving: "Alex is leaving — keep him on the line", closing: "Closing the call", complete: "Call complete" };
+const endingLabels = {
+  won: { eyebrow: "Practice deal won", headline: "You won the practice deal.", detail: "Alex pushed his meeting and is bringing in the contract owners now." },
+  callback: { eyebrow: "Callback earned", headline: "Interested — not closed yet.", detail: "Alex asked you to call back in 10–15 minutes. One more handled objection would have closed it." },
+  walkaway: { eyebrow: "Alex walked away", headline: "He wasn’t interested.", detail: "No objections landed and the fake exit wasn’t recovered. Try asking for a concrete next step when he moves to leave." },
+  timeout: { eyebrow: "Practice complete", headline: "The call ran out of time.", detail: "Alex hung up before you introduced yourself." },
+} as const;
 
 export default function TrainPage() {
   const [reps, setReps] = useState<RepView[]>([]);
@@ -79,7 +85,7 @@ export default function TrainPage() {
             </div>
             <div className={styles.callBody}>
               <div className={styles.callHeading}>
-                <div><p className={styles.eyebrow}>{call ? phaseLabels[call.phase] : "Cold-call practice"}</p><h3>{call?.outcome === "won" ? "You won the practice deal." : active ? "Make the conversation yours." : "Ready when you are."}</h3></div>
+                <div><p className={styles.eyebrow}>{call ? phaseLabels[call.phase] : "Cold-call practice"}</p><h3>{call?.ending ? endingLabels[call.ending].headline : call?.phase === "leaving" ? "He’s about to hang up. Ask for the next step." : active ? "Make the conversation yours." : "Ready when you are."}</h3></div>
                 {active && <div className={styles.timer} aria-label="Time remaining">{remaining === null ? "⏸" : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`}<small>{remaining === null ? "paused · Alex's turn" : "your time left"}</small></div>}
               </div>
               <ol className={styles.phases} aria-label="Training phases">
@@ -99,7 +105,7 @@ export default function TrainPage() {
                 <>
                   <div className={styles.prospect} aria-live="polite"><span className={styles.avatar}>A</span><div><p>Alex · prospect</p><blockquote>{customer?.text}</blockquote></div></div>
                   {active && <>
-                    <div className={styles.callStatus} role="status"><span className={coach.listening ? styles.listeningDot : styles.thinkingDot} />{call.pending?.kind === "reply" ? "Alex is considering your answer…" : call.pending?.kind === "line" ? "Alex is thinking…" : call.pending?.kind === "speak" ? coach.audioEnabled ? "Alex is speaking…" : "Alex’s reply is on screen" : coach.mode === "voice" ? "Your turn · listening" : "Your turn · type your response"}<span>{call.handledIds.length} / 2 objections addressed</span></div>
+                    <div className={styles.callStatus} role="status"><span className={coach.listening ? styles.listeningDot : styles.thinkingDot} />{call.pending?.kind === "reply" ? "Alex is considering your answer…" : call.pending?.kind === "line" ? "Alex is thinking…" : call.pending?.kind === "speak" ? coach.audioEnabled ? "Alex is speaking…" : "Alex’s reply is on screen" : coach.mode === "voice" ? "Your turn · listening" : "Your turn · type your response"}<span>{call.handledIds.length} / 2 objections addressed{call.phase === "leaving" ? " · recover the exit for +1" : ""}</span></div>
                     {coach.mode === "voice" ? <div className={styles.liveWords}><p>{coach.interim || (config?.stt === "elevenlabs" ? "Speak, then pause — your turn is transcribed when you stop." : "Your words will appear here as they’re recognized.")}</p><button className={styles.textButton} onClick={() => coach.setMode("text")}>Use typed input instead</button></div> : <form className={styles.responseForm} onSubmit={(event) => { event.preventDefault(); coach.send(draft); setDraft(""); }}><label htmlFor="rep-response">Your response</label><textarea id="rep-response" rows={3} maxLength={1200} value={draft} disabled={!coach.listening} onChange={(event) => setDraft(event.target.value)} placeholder={call.phase === "intro" ? `Hi, I’m ${call.scenario.repName.split(" ")[0]} from ${call.scenario.company}. We offer ${call.scenario.offer}…` : "Acknowledge the concern, answer it, and make the value concrete."} /><button className={styles.primaryButton} disabled={!coach.listening || !draft.trim()}>Send response</button></form>}
                     <div className={styles.callActions}><button className={styles.secondaryButton} onClick={coach.finish} disabled={!call.transcript.some((turn) => turn.speaker === "rep")}>End & score</button><button className={styles.textButton} onClick={() => { coach.reset(); setDraft(""); }}>Cancel call</button></div>
                   </>}
@@ -125,7 +131,7 @@ export default function TrainPage() {
           </aside>
         </div>
         {call?.phase === "complete" && <section className={styles.results} aria-labelledby="results-title">
-          <div className={styles.resultHeading}><div><p className={styles.eyebrow}>{call.outcome === "won" ? "Practice deal won" : "Practice complete"}</p><h2 id="results-title">Your call, reflected back.</h2><p>{call.scenario.repName} · {Math.round((call.now - call.startedMs) / 1000)} seconds · Outcome: {call.outcome}</p></div><button className={styles.secondaryButton} disabled={status === "scoring" || status === "saving"} onClick={() => { coach.reset(); setDraft(""); }}>Practice again</button></div>
+          <div className={styles.resultHeading}><div><p className={styles.eyebrow}>{call.ending ? endingLabels[call.ending].eyebrow : "Practice complete"}</p><h2 id="results-title">Your call, reflected back.</h2><p>{call.scenario.repName} · {Math.round((call.now - call.startedMs) / 1000)} seconds · {call.ending ? endingLabels[call.ending].detail : "Ended manually."} Saved outcome: {call.outcome}.</p></div><button className={styles.secondaryButton} disabled={status === "scoring" || status === "saving"} onClick={() => { coach.reset(); setDraft(""); }}>Practice again</button></div>
           {(status === "scoring" || status === "saving") && <p role="status" className={styles.notice}>{status === "scoring" ? "Scoring your transcript with the shared rubric…" : "Saving your results to the team’s training view…"}</p>}
           {coach.error && <div role="alert" className={styles.alert}><p>{coach.error}</p>{call.transcript.some((turn) => turn.speaker === "rep") && <button onClick={coach.retry}>{result ? "Retry saving" : "Retry scoring"}</button>}</div>}
           {result && <>

@@ -73,7 +73,12 @@ try {
   await normal.clock.fastForward(11_000);
   await normal.locator("blockquote").filter({ hasText: "Let me stop you there" }).waitFor();
   await normal.clock.fastForward(21_000);
+  await normal.locator("blockquote").filter({ hasText: "I need to jump" }).waitFor();
+  await normal.getByText("keep him on the line", { exact: false }).waitFor();
+  await normal.clock.fastForward(21_000);
+  await normal.locator("blockquote").filter({ hasText: "This isn't for us" }).waitFor();
   await normal.getByText("Results saved to the demo training store.", { exact: true }).waitFor({ timeout: 60_000 });
+  await normal.getByText("Alex walked away", { exact: true }).waitFor();
   assert.equal(scored.session.outcome, "scored");
   assert.equal(scored.session.transcript.filter(turn => turn.text.includes("Sorry, who is this?")).length, 1);
   if (process.env.TRAINING_TEST_PLACEHOLDER === "1") {
@@ -86,7 +91,26 @@ try {
   await normal.getByRole("row", { name: /Sarah Kim/ }).waitFor();
   assert.match(await normal.getByRole("row", { name: /Sarah Kim/ }).innerText(), new RegExp(`${scored.session.scores.closeRate}%`));
   await normal.close();
-  console.log("PASS normal flow: intro pushback once, 10s/20s sliders, interruption, shared scoring, save, transcript, Monitor loop");
+  console.log("PASS normal flow: intro pushback once, 10s/20s sliders, interruption, fake leave ignored -> walkaway, shared scoring, save, transcript, Monitor loop");
+
+  const callback = await pageForCall();
+  let callbackOutcome;
+  callback.on("request", request => { if (new URL(request.url()).pathname === "/api/training/sessions") callbackOutcome = request.postDataJSON().outcome; });
+  await typeTurn(callback, intro);
+  await callback.getByText("Make your pitch", { exact: true }).waitFor();
+  await callback.waitForFunction(() => !document.querySelector("#rep-response").disabled);
+  await callback.clock.fastForward(11_000);
+  await callback.locator("blockquote").filter({ hasText: "Let me stop you there" }).waitFor();
+  await callback.waitForFunction(() => !document.querySelector("#rep-response").disabled);
+  await callback.clock.fastForward(21_000);
+  await callback.locator("blockquote").filter({ hasText: "I need to jump" }).waitFor();
+  await typeTurn(callback, "Before you go — can I grab fifteen minutes on your calendar Thursday to walk your ops lead through the pilot numbers?");
+  await callback.locator("blockquote").filter({ hasText: "Call me back in ten, fifteen minutes" }).waitFor();
+  await callback.getByText("Results saved to the demo training store.", { exact: true }).waitFor({ timeout: 60_000 });
+  await callback.getByText("Callback earned", { exact: true }).waitFor();
+  assert.equal(callbackOutcome, "scored", "callback is not representable in the shared outcome type");
+  await callback.close();
+  console.log("PASS callback flow: no objections handled, fake leave recovered with a concrete ask -> 'call me back in 10-15'");
 
   const won = await pageForCall();
   let savedOutcome;
@@ -98,13 +122,14 @@ try {
   await typeTurn(won, "I understand the budget concern. A small pilot lets you measure the hours saved and demonstrate payback before committing.");
   await won.locator("blockquote").filter({ hasText: "existing CRM" }).waitFor();
   await typeTurn(won, "Your integration question is fair. The CRM connects through its documented API, and we can validate the export workflow with your engineer.");
-  await won.locator("blockquote").filter({ hasText: "ready to purchase" }).waitFor();
+  await won.locator("blockquote").filter({ hasText: "push my next meeting" }).waitFor();
   await won.getByText("Results saved to the demo training store.", { exact: true }).waitFor({ timeout: 60_000 });
+  await won.getByText("Practice deal won", { exact: true }).waitFor();
   assert.equal(savedOutcome, "won");
   await won.setViewportSize({ width: 390, height: 844 });
   assert.equal(await won.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await won.close();
-  console.log("PASS win flow: two distinct objections, purchase/link/stay-on-line close, outcome won, mobile layout");
+  console.log("PASS win flow: two distinct objections -> Alex pushes his meeting and brings in contract owners, outcome won, mobile layout");
 
   const retry = await pageForCall();
   let scoreCalls = 0;

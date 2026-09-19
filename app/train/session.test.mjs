@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createCall, reduceCall, hasIntroduction, isFreshAnswer, fallbackReply, FALLBACK_LINES, PITCH_DURATION_SEC, OBJECTION_DURATION_SEC } from "./session.ts";
+import { createCall, reduceCall, hasIntroduction, isFreshAnswer, fallbackReply, fallbackRecovery, decideEnding, FALLBACK_LINES, PITCH_DURATION_SEC, OBJECTION_DURATION_SEC, FAKE_LEAVE_WINDOW_SEC } from "./session.ts";
 
 const scenario = { repName: "Sarah Kim", company: "Northstar", offer: "CRM automation" };
 const objections = [
@@ -66,15 +66,62 @@ test("the objection clock only runs while it is the rep's turn", () => {
   assert.match(state.transcript.at(-1).text, /That addresses my concern\. And how does it plug into our CRM\?/);
 });
 
-test("challenge deadline closes the call and stale replies are ignored", () => {
+test("when the objection clock runs out Alex fakes leaving and gives the rep a 20s window", () => {
   let state = readyChallenge();
   state = reduceCall(state, { type: "tick", now: 93000 });
-  assert.equal(state.phase, "closing");
-  assert.equal(state.pending.event, "closing");
-  assert.equal(state.outcome, "scored");
-  const stale = reduceCall(state, { type: "reply", callId: state.id, pendingId: 999, reply: "Late", handled: true, mode: "model", now: 94000 });
+  assert.equal(state.phase, "leaving");
+  assert.equal(state.pending.event, "fake-leave");
+  assert.equal(state.frozenMs, FAKE_LEAVE_WINDOW_SEC * 1000);
+  state = voiced(state, 95000);
+  assert.equal(state.deadline, 95000 + FAKE_LEAVE_WINDOW_SEC * 1000);
+  const stale = reduceCall(state, { type: "reply", callId: state.id, pendingId: 999, reply: "Late", handled: true, mode: "model", now: 96000 });
   assert.equal(stale, state);
-  assert.equal(voiced(state, 95000).phase, "complete");
+});
+
+test("silence after the fake leave means he really goes: walkaway, saved as scored", () => {
+  let state = voiced(reduceCall(readyChallenge(), { type: "tick", now: 93000 }), 95000);
+  state = reduceCall(state, { type: "tick", now: 95000 + FAKE_LEAVE_WINDOW_SEC * 1000 });
+  assert.deepEqual([state.phase, state.ending, state.outcome, state.pending.event], ["closing", "walkaway", "scored", "walkaway"]);
+  assert.equal(voiced(state, 120000).phase, "complete");
+});
+
+test("the ending is decided from handled objections plus recovering the fake leave", () => {
+  assert.equal(decideEnding(0, false), "walkaway");
+  assert.equal(decideEnding(1, false), "callback");
+  assert.equal(decideEnding(0, true), "callback");
+  assert.equal(decideEnding(1, true), "won");
+  assert.equal(decideEnding(2, false), "won");
+});
+
+test("recovering the fake leave with one objection handled wins; without any it earns a callback", () => {
+  const leaving = () => voiced(reduceCall(readyChallenge(), { type: "tick", now: 93000 }), 95000);
+  const recover = (state) => rep(state, "Before you go — can I grab fifteen minutes on your calendar Thursday to walk your ops lead through the pilot numbers?", 100000);
+  let state = recover(leaving());
+  assert.equal(state.pending.kind, "reply");
+  assert.equal(state.deadline, null, "clock parks while Alex judges the recovery");
+  state = reduceCall(state, { type: "reply", callId: state.id, pendingId: state.pending.id, reply: "", handled: true, mode: "model", now: 101000 });
+  assert.deepEqual([state.phase, state.ending, state.outcome, state.pending.event], ["closing", "callback", "scored", "callback"]);
+
+  let won = rep(readyChallenge(), "I understand the budget concern. A small pilot lets you measure the hours saved and demonstrate payback before committing.", 35000);
+  won = spoken(reply(won, true, 36000), 37000);
+  won = voiced(reduceCall(won, { type: "tick", now: won.deadline }), won.deadline + 2000);
+  assert.equal(won.phase, "leaving");
+  won = recover(won);
+  won = reduceCall(won, { type: "reply", callId: won.id, pendingId: won.pending.id, reply: "", handled: true, mode: "model", now: 101000 });
+  assert.deepEqual([won.ending, won.outcome, won.pending.event], ["won", "won", "won"]);
+  assert.match(won.pending.fallback, /push my next meeting/i);
+  assert.match(won.pending.fallback, /contract/i);
+  assert.match(won.pending.fallback, /email.*channel/i);
+
+  let lost = recover(leaving());
+  lost = reduceCall(lost, { type: "reply", callId: lost.id, pendingId: lost.pending.id, reply: "", handled: false, mode: "model", now: 101000 });
+  assert.deepEqual([lost.ending, lost.pending.event], ["walkaway", "walkaway"]);
+});
+
+test("scripted recovery judgement wants a concrete ask, not an apology", () => {
+  assert.equal(fallbackRecovery("Before you go, could we book fifteen minutes on Thursday to walk through the pilot numbers?").handled, true);
+  assert.equal(fallbackRecovery("Okay, no problem, sorry to bother you, bye.").handled, false);
+  assert.equal(fallbackRecovery("Sure.").handled, false);
 });
 
 test("wins only after two distinct handled objections with non-repeated answers", () => {
@@ -86,9 +133,10 @@ test("wins only after two distinct handled objections with non-repeated answers"
   assert.equal(state.outcome, "won");
   assert.equal(state.phase, "closing");
   assert.equal(state.pending.event, "won");
-  assert.match(state.pending.fallback, /ready to purchase/i);
-  assert.match(state.pending.fallback, /alex@prospect\.example/);
-  assert.match(state.pending.fallback, /stay on the line/i);
+  assert.equal(state.ending, "won");
+  assert.match(state.pending.fallback, /push my next meeting/i);
+  assert.match(state.pending.fallback, /procurement|contract/i);
+  assert.match(state.pending.fallback, /email|channel/i);
 });
 
 test("repetition and short answers do not earn a win even when the model says handled", () => {

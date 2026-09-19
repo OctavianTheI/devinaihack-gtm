@@ -9,7 +9,7 @@ export const maxDuration = 15;
 
 const requestSchema = z.object({
   scenario: scenarioSchema,
-  event: z.enum(["greeting", "pushback", "intro-accepted", "interrupt", "closing", "won"]),
+  event: z.enum(["greeting", "pushback", "intro-accepted", "interrupt", "fake-leave", "won", "callback", "walkaway", "closing"]),
   transcript: transcriptSchema.or(z.array(z.never()).max(0)),
   objectionId: z.string().min(1).max(100).optional(),
 });
@@ -20,11 +20,14 @@ const BEATS: Record<LineEvent, string> = {
   pushback: "The caller launched into a pitch without saying who they are, what company they're from, or what they're offering. Cut in and ask who this is and what it's about. One or two short sentences.",
   "intro-accepted": "The caller has introduced themselves properly. Grudgingly give them a minute, making it clear you're busy and they need to get to the point. One or two sentences. Don't ask a question yet.",
   interrupt: "The caller has used up their time pitching. Cut them off mid-flow, briefly reference something specific they actually said, then raise the objection below in your own words as a pointed challenge. Two or three sentences, ending with the challenge.",
+  "fake-leave": "Time's up and you're going to test them: act like you have to end the call right now — another meeting is starting, you have to jump. Sound genuinely about to hang up, but don't actually say goodbye; leave them one beat to react. One or two short sentences. Do NOT reveal this is a test.",
+  won: "They handled your concerns and just kept the call alive when you tried to leave. You've decided to move forward. Drop the skepticism. You MUST, in natural phone speech, do all three: say you can push/postpone your next meeting; say you'll bring in the people responsible for contracts (procurement/legal/your team) right now to get the contract set up; ask where they'd prefer to take it — email or a shared channel. Two or three sentences.",
+  callback: "You're interested but not convinced enough to commit on this call. Tell them so honestly, and tell them to call you back in ten to fifteen minutes to pick it up. One or two sentences. Do not agree to buy.",
+  walkaway: "You're not interested. Cut them off, say clearly this isn't for you, and end the call. Polite but final, one or two short sentences. No follow-up, no maybe.",
   closing: "You're out of time and not convinced. End the call politely but firmly. Do NOT agree to buy, book, or follow up. One or two sentences.",
-  won: "The caller has genuinely answered your concerns and you've decided to move forward. Drop the skepticism. You MUST, in natural phone speech, do all three: say you're ready to purchase; ask them to send the link to alex@prospect.example; tell them to stay on the line so you can get this going right now. Two or three sentences.",
 };
 
-const WON_BEATS = [/\b(purchase|buy|buying|sign up|move forward|do this|go ahead)\b/i, /alex@prospect\.example/i, /\b(stay on the line|stay on|don't hang up|right now|going now)\b/i];
+const WON_BEATS = [/\b(push|postpone|move|reschedule|bump|delay)\b.*\b(meeting|call|next)\b|\b(meeting|call)\b.*\b(push|postpone|move|reschedule|bump|wait)\b/i, /\b(contract|procurement|legal|paperwork|agreement|team)\b/i, /\b(email|channel|slack|teams|where)\b/i];
 
 export async function POST(request: Request) {
   try {
@@ -48,6 +51,7 @@ export async function POST(request: Request) {
     });
     if (!result) return respond(fallback, "scripted");
     if (event === "won" && !WON_BEATS.every((beat) => beat.test(result.text))) return respond(WON_MESSAGE, "scripted");
+    if (event === "walkaway" && /\b(call me|reach out|follow up|send me|maybe|next week)\b/i.test(result.text)) return respond(FALLBACK_LINES.walkaway, "scripted");
     return respond(result.text, "model");
   } catch (error) { return trainingError(error); }
 }

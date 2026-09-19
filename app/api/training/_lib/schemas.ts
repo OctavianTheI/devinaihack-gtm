@@ -23,7 +23,9 @@ export const scoreRequestSchema = z.object({
 
 export const replyRequestSchema = z.object({
   scenario: scenarioSchema,
-  objectionId: z.string().min(1).max(100),
+  objectionId: z.string().min(1).max(100).optional(),
   nextObjectionId: z.string().min(1).max(100).optional(),
+  /** Alex just faked leaving; judge whether the rep recovered instead of scoring an objection. */
+  leaving: z.boolean().optional(),
   transcript: transcriptSchema,
-});
+}).refine((body) => body.leaving || body.objectionId, { message: "objectionId is required unless leaving" });
