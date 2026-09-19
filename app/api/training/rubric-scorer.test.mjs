@@ -15,7 +15,8 @@ const provider = createServer(async (request, response) => {
     const data = JSON.parse(body);
     assert.equal(data.model, "inclusionai/ling-3.0-flash-vl:free");
     assert.equal(data.response_format, undefined);
-    assert.equal(data.max_tokens, 1200);
+    assert.equal(data.max_tokens, 1600);
+    assert.deepEqual(data.reasoning, { enabled: false });
     assert.match(data.messages[0].content, /Objection handling/);
     providerCalls++;
     response.setHeader("content-type", "application/json");
