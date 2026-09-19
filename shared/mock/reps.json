@@ -1,0 +1,519 @@
+[
+  {
+    "id": "rep-01",
+    "name": "Sarah Kim",
+    "biggestDealUsd": 150000,
+    "live": {
+      "closeRate": 80,
+      "objectionHandling": 79,
+      "scriptAdherence": 90,
+      "technicalAnswers": 84
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Objection handling",
+        "whatTheyDid": "Reframes pricing objections around ROI and payback period instead of reciting the discount script.",
+        "aiReason": "Keeps the conversation on value rather than price, which correlates with a higher close rate in this cohort.",
+        "verdict": "good"
+      }
+    ]
+  },
+  {
+    "id": "rep-02",
+    "name": "Marcus Reyes",
+    "biggestDealUsd": 81000,
+    "live": {
+      "closeRate": 79,
+      "objectionHandling": 68,
+      "scriptAdherence": 65,
+      "technicalAnswers": 70
+    },
+    "training": {
+      "closeRate": 92,
+      "objectionHandling": 84,
+      "scriptAdherence": 83,
+      "technicalAnswers": 74
+    },
+    "divergences": [
+      {
+        "scriptStep": "Discovery",
+        "whatTheyDid": "Asks two extra open-ended questions about the prospect's current workflow before pitching.",
+        "aiReason": "Surfaces objections earlier, so they get handled before the close instead of derailing it.",
+        "verdict": "good"
+      }
+    ]
+  },
+  {
+    "id": "rep-03",
+    "name": "Priya Nagy",
+    "biggestDealUsd": 85000,
+    "live": {
+      "closeRate": 67,
+      "objectionHandling": 89,
+      "scriptAdherence": 88,
+      "technicalAnswers": 88
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Close",
+        "whatTheyDid": "Proposes a specific next calendar date instead of the generic 'follow up soon' close.",
+        "aiReason": "Concrete next steps measurably increase follow-through to a signed deal.",
+        "verdict": "good"
+      }
+    ]
+  },
+  {
+    "id": "rep-04",
+    "name": "Jonas Horvath",
+    "biggestDealUsd": 58000,
+    "live": {
+      "closeRate": 88,
+      "objectionHandling": 65,
+      "scriptAdherence": 85,
+      "technicalAnswers": 91
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Technical Q&A",
+        "whatTheyDid": "Brings in a short customer story instead of a spec sheet when asked about integrations.",
+        "aiReason": "Answers the underlying trust question, not just the technical one.",
+        "verdict": "good"
+      }
+    ]
+  },
+  {
+    "id": "rep-05",
+    "name": "Elena Silva",
+    "biggestDealUsd": 163000,
+    "live": {
+      "closeRate": 73,
+      "objectionHandling": 82,
+      "scriptAdherence": 66,
+      "technicalAnswers": 72
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Objection handling",
+        "whatTheyDid": "Reframes pricing objections around ROI and payback period instead of reciting the discount script.",
+        "aiReason": "Keeps the conversation on value rather than price, which correlates with a higher close rate in this cohort.",
+        "verdict": "good"
+      }
+    ]
+  },
+  {
+    "id": "rep-06",
+    "name": "Diego Cohen",
+    "biggestDealUsd": 45000,
+    "live": {
+      "closeRate": 52,
+      "objectionHandling": 58,
+      "scriptAdherence": 44,
+      "technicalAnswers": 60
+    },
+    "training": null,
+    "divergences": []
+  },
+  {
+    "id": "rep-07",
+    "name": "Aisha Novak",
+    "biggestDealUsd": 17000,
+    "live": {
+      "closeRate": 68,
+      "objectionHandling": 67,
+      "scriptAdherence": 50,
+      "technicalAnswers": 67
+    },
+    "training": null,
+    "divergences": []
+  },
+  {
+    "id": "rep-08",
+    "name": "Tom Baptiste",
+    "biggestDealUsd": 47000,
+    "live": {
+      "closeRate": 68,
+      "objectionHandling": 52,
+      "scriptAdherence": 44,
+      "technicalAnswers": 58
+    },
+    "training": {
+      "closeRate": 48,
+      "objectionHandling": 70,
+      "scriptAdherence": 51,
+      "technicalAnswers": 53
+    },
+    "divergences": []
+  },
+  {
+    "id": "rep-09",
+    "name": "Yuki Ito",
+    "biggestDealUsd": 21000,
+    "live": {
+      "closeRate": 60,
+      "objectionHandling": 67,
+      "scriptAdherence": 61,
+      "technicalAnswers": 61
+    },
+    "training": {
+      "closeRate": 52,
+      "objectionHandling": 46,
+      "scriptAdherence": 69,
+      "technicalAnswers": 71
+    },
+    "divergences": [
+      {
+        "scriptStep": "Discovery",
+        "whatTheyDid": "Skips discovery questions and jumps straight to the pitch.",
+        "aiReason": "Leads to generic pitches that don't address the prospect's actual concern, which shows up later as unresolved objections.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-10",
+    "name": "Noah Fischer",
+    "biggestDealUsd": 41000,
+    "live": {
+      "closeRate": 56,
+      "objectionHandling": 46,
+      "scriptAdherence": 45,
+      "technicalAnswers": 48
+    },
+    "training": {
+      "closeRate": 59,
+      "objectionHandling": 72,
+      "scriptAdherence": 56,
+      "technicalAnswers": 55
+    },
+    "divergences": []
+  },
+  {
+    "id": "rep-11",
+    "name": "Fatima Haddad",
+    "biggestDealUsd": 36000,
+    "live": {
+      "closeRate": 56,
+      "objectionHandling": 45,
+      "scriptAdherence": 65,
+      "technicalAnswers": 56
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Pitch",
+        "whatTheyDid": "Over-promises a delivery timeline not confirmed with the delivery team.",
+        "aiReason": "Creates downstream churn risk and support escalations.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-12",
+    "name": "Liam Moreau",
+    "biggestDealUsd": 51000,
+    "live": {
+      "closeRate": 65,
+      "objectionHandling": 62,
+      "scriptAdherence": 58,
+      "technicalAnswers": 56
+    },
+    "training": {
+      "closeRate": 44,
+      "objectionHandling": 53,
+      "scriptAdherence": 59,
+      "technicalAnswers": 52
+    },
+    "divergences": []
+  },
+  {
+    "id": "rep-13",
+    "name": "Zara Petrov",
+    "biggestDealUsd": 52000,
+    "live": {
+      "closeRate": 61,
+      "objectionHandling": 47,
+      "scriptAdherence": 71,
+      "technicalAnswers": 60
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Objection handling",
+        "whatTheyDid": "Reframes pricing objections around ROI and payback period instead of reciting the discount script.",
+        "aiReason": "Keeps the conversation on value rather than price, which correlates with a higher close rate in this cohort.",
+        "verdict": "good"
+      }
+    ]
+  },
+  {
+    "id": "rep-14",
+    "name": "Kenji Adeyemi",
+    "biggestDealUsd": 16000,
+    "live": {
+      "closeRate": 63,
+      "objectionHandling": 57,
+      "scriptAdherence": 66,
+      "technicalAnswers": 62
+    },
+    "training": null,
+    "divergences": []
+  },
+  {
+    "id": "rep-15",
+    "name": "Olivia Larsen",
+    "biggestDealUsd": 13000,
+    "live": {
+      "closeRate": 57,
+      "objectionHandling": 46,
+      "scriptAdherence": 69,
+      "technicalAnswers": 54
+    },
+    "training": null,
+    "divergences": []
+  },
+  {
+    "id": "rep-16",
+    "name": "Bilal Costa",
+    "biggestDealUsd": 33000,
+    "live": {
+      "closeRate": 47,
+      "objectionHandling": 59,
+      "scriptAdherence": 57,
+      "technicalAnswers": 71
+    },
+    "training": {
+      "closeRate": 71,
+      "objectionHandling": 70,
+      "scriptAdherence": 61,
+      "technicalAnswers": 61
+    },
+    "divergences": []
+  },
+  {
+    "id": "rep-17",
+    "name": "Grace Dubois",
+    "biggestDealUsd": 54000,
+    "live": {
+      "closeRate": 58,
+      "objectionHandling": 50,
+      "scriptAdherence": 50,
+      "technicalAnswers": 47
+    },
+    "training": {
+      "closeRate": 72,
+      "objectionHandling": 62,
+      "scriptAdherence": 50,
+      "technicalAnswers": 64
+    },
+    "divergences": [
+      {
+        "scriptStep": "Discovery",
+        "whatTheyDid": "Skips discovery questions and jumps straight to the pitch.",
+        "aiReason": "Leads to generic pitches that don't address the prospect's actual concern, which shows up later as unresolved objections.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-18",
+    "name": "Viktor Okafor",
+    "biggestDealUsd": 57000,
+    "live": {
+      "closeRate": 51,
+      "objectionHandling": 46,
+      "scriptAdherence": 59,
+      "technicalAnswers": 65
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Objection handling",
+        "whatTheyDid": "Repeats the same rebuttal twice instead of addressing the follow-up question.",
+        "aiReason": "Reads as defensive and stalls the conversation instead of resolving the concern.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-19",
+    "name": "Maya Bianchi",
+    "biggestDealUsd": 23000,
+    "live": {
+      "closeRate": 49,
+      "objectionHandling": 45,
+      "scriptAdherence": 51,
+      "technicalAnswers": 49
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Pitch",
+        "whatTheyDid": "Over-promises a delivery timeline not confirmed with the delivery team.",
+        "aiReason": "Creates downstream churn risk and support escalations.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-20",
+    "name": "Sam Sorensen",
+    "biggestDealUsd": 14000,
+    "live": {
+      "closeRate": 46,
+      "objectionHandling": 50,
+      "scriptAdherence": 54,
+      "technicalAnswers": 45
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Close",
+        "whatTheyDid": "Never explicitly asks for the sale; lets the call end on 'let me know what you think'.",
+        "aiReason": "Passive closes correlate with deals stalling indefinitely.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-21",
+    "name": "Ines Park",
+    "biggestDealUsd": 31000,
+    "live": {
+      "closeRate": 64,
+      "objectionHandling": 49,
+      "scriptAdherence": 66,
+      "technicalAnswers": 53
+    },
+    "training": {
+      "closeRate": 59,
+      "objectionHandling": 56,
+      "scriptAdherence": 63,
+      "technicalAnswers": 64
+    },
+    "divergences": []
+  },
+  {
+    "id": "rep-22",
+    "name": "Rahul Weber",
+    "biggestDealUsd": 13000,
+    "live": {
+      "closeRate": 33,
+      "objectionHandling": 41,
+      "scriptAdherence": 46,
+      "technicalAnswers": 50
+    },
+    "training": {
+      "closeRate": 46,
+      "objectionHandling": 46,
+      "scriptAdherence": 69,
+      "technicalAnswers": 60
+    },
+    "divergences": [
+      {
+        "scriptStep": "Objection handling",
+        "whatTheyDid": "Repeats the same rebuttal twice instead of addressing the follow-up question.",
+        "aiReason": "Reads as defensive and stalls the conversation instead of resolving the concern.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-23",
+    "name": "Chloe Adams",
+    "biggestDealUsd": 16000,
+    "live": {
+      "closeRate": 49,
+      "objectionHandling": 47,
+      "scriptAdherence": 47,
+      "technicalAnswers": 48
+    },
+    "training": {
+      "closeRate": 55,
+      "objectionHandling": 55,
+      "scriptAdherence": 45,
+      "technicalAnswers": 57
+    },
+    "divergences": [
+      {
+        "scriptStep": "Pitch",
+        "whatTheyDid": "Over-promises a delivery timeline not confirmed with the delivery team.",
+        "aiReason": "Creates downstream churn risk and support escalations.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-24",
+    "name": "Andre Ferreira",
+    "biggestDealUsd": 5000,
+    "live": {
+      "closeRate": 41,
+      "objectionHandling": 48,
+      "scriptAdherence": 43,
+      "technicalAnswers": 43
+    },
+    "training": {
+      "closeRate": 67,
+      "objectionHandling": 60,
+      "scriptAdherence": 53,
+      "technicalAnswers": 49
+    },
+    "divergences": [
+      {
+        "scriptStep": "Close",
+        "whatTheyDid": "Never explicitly asks for the sale; lets the call end on 'let me know what you think'.",
+        "aiReason": "Passive closes correlate with deals stalling indefinitely.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-25",
+    "name": "Nina Lund",
+    "biggestDealUsd": 5000,
+    "live": {
+      "closeRate": 25,
+      "objectionHandling": 29,
+      "scriptAdherence": 44,
+      "technicalAnswers": 26
+    },
+    "training": {
+      "closeRate": 63,
+      "objectionHandling": 48,
+      "scriptAdherence": 49,
+      "technicalAnswers": 44
+    },
+    "divergences": [
+      {
+        "scriptStep": "Discovery",
+        "whatTheyDid": "Skips discovery questions and jumps straight to the pitch.",
+        "aiReason": "Leads to generic pitches that don't address the prospect's actual concern, which shows up later as unresolved objections.",
+        "verdict": "bad"
+      }
+    ]
+  },
+  {
+    "id": "rep-26",
+    "name": "Peter Varga",
+    "biggestDealUsd": 10000,
+    "live": {
+      "closeRate": 48,
+      "objectionHandling": 45,
+      "scriptAdherence": 34,
+      "technicalAnswers": 35
+    },
+    "training": null,
+    "divergences": [
+      {
+        "scriptStep": "Objection handling",
+        "whatTheyDid": "Repeats the same rebuttal twice instead of addressing the follow-up question.",
+        "aiReason": "Reads as defensive and stalls the conversation instead of resolving the concern.",
+        "verdict": "bad"
+      }
+    ]
+  }
+]
