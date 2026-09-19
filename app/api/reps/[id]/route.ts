@@ -20,5 +20,8 @@ export async function GET(
     return NextResponse.json({ error: `No rep with id "${id}"` }, { status: 404 });
   }
   const average = teamAverage(source);
-  return NextResponse.json({ rep, teamAverage: average });
+  return NextResponse.json(
+    { rep, teamAverage: average },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

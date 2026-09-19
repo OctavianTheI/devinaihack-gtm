@@ -13,5 +13,8 @@ export async function GET(req: NextRequest) {
   const source = parseSource(req.nextUrl.searchParams.get("source"));
   const reps = listReps(source);
   const average = teamAverage(source);
-  return NextResponse.json({ source, reps, teamAverage: average });
+  return NextResponse.json(
+    { source, reps, teamAverage: average },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
