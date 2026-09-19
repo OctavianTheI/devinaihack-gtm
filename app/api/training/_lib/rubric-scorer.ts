@@ -27,7 +27,17 @@ export async function scoreWithRubric(transcript: ScorerTranscriptTurn[], key: s
   const content = data.choices?.[0]?.message?.content;
   let result: unknown;
   try { result = JSON.parse(typeof content === "string" ? content.replace(/^```(?:json)?\s*|\s*```$/g, "").trim() : "null"); }
-  catch { throw new TrainingRequestError("The model returned invalid grading JSON. Your transcript is retained; please retry.", 503); }
+  catch {
+    console.warn("[training/rubric] invalid grading JSON", {
+      finishReason: data.choices?.[0]?.finish_reason,
+      contentLength: typeof content === "string" ? content.length : 0,
+      leadingFence: typeof content === "string" && /^\s*```/.test(content),
+      leadingJson: typeof content === "string" && /^\s*\{/.test(content),
+      trailingJson: typeof content === "string" && /\}\s*$/.test(content),
+      hasReasoning: Boolean(data.choices?.[0]?.message?.reasoning),
+    });
+    throw new TrainingRequestError("The model returned invalid grading JSON. Your transcript is retained; please retry.", 503);
+  }
   const parsed = resultSchema.safeParse(result);
   if (!parsed.success) throw new TrainingRequestError("The model returned incomplete grading. Your transcript is retained; please retry.", 503);
   return parsed.data;
