@@ -24,6 +24,8 @@ export interface Rep {
   id: string;
   name: string;
   biggestDealUsd: number;
+  avgDealSizeUsd: number; // average deal size across their sales
+  monthlySalesVolume: number; // number of deals closed per month
   live: Scores; // from real calls (dummy data)
   training: Scores | null; // from voice-coach sessions, null until they train
   divergences: Divergence[]; // derived from live and/or training data
@@ -50,6 +52,7 @@ export interface TrainingSession {
   startedAt: string; // ISO timestamp
   durationSec: number;
   transcript: TrainingTranscriptTurn[];
+  outcome: "scored" | "won"; // "won" = the voice coach's success branch fired mid-call
   scores: Scores; // closeRate here = AI's estimate of close likelihood
   divergences: Divergence[];
   summary: string;
