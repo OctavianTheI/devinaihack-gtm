@@ -5,14 +5,14 @@
 
 import { z } from "zod";
 
-const scoresSchema = z.object({
+export const scoresSchema = z.object({
   closeRate: z.number().min(0).max(100),
   objectionHandling: z.number().min(0).max(100),
   scriptAdherence: z.number().min(0).max(100),
   technicalAnswers: z.number().min(0).max(100),
 });
 
-const divergenceSchema = z.object({
+export const divergenceSchema = z.object({
   scriptStep: z.string().min(1),
   whatTheyDid: z.string().min(1),
   verdict: z.enum(["good", "neutral", "bad"]),
@@ -31,6 +31,7 @@ export const trainingSessionInputSchema = z.object({
   startedAt: z.string().datetime().optional(),
   durationSec: z.number().min(0),
   transcript: z.array(transcriptTurnSchema),
+  outcome: z.enum(["scored", "won"]),
   scores: scoresSchema,
   divergences: z.array(divergenceSchema),
   summary: z.string(),

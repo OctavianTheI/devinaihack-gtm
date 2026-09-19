@@ -96,10 +96,25 @@ function makeReps() {
           ? Math.round((10000 + rand() * 50000) / 1000) * 1000
           : Math.round((2000 + rand() * 20000) / 1000) * 1000;
 
+    // Average deal is a fraction of their biggest, so the two stay consistent
+    // and tier differences carry through automatically.
+    const avgDealSizeUsd = Math.max(
+      1000,
+      Math.round((biggestDealUsd * (0.25 + rand() * 0.3)) / 500) * 500
+    );
+    const monthlySalesVolume =
+      tier === "top"
+        ? 8 + Math.floor(rand() * 7) // 8-14 deals/month
+        : tier === "mid"
+          ? 4 + Math.floor(rand() * 6) // 4-9
+          : 1 + Math.floor(rand() * 4); // 1-4
+
     reps.push({
       id: `rep-${String(i + 1).padStart(2, "0")}`,
       name: `${first} ${last}`,
       biggestDealUsd,
+      avgDealSizeUsd,
+      monthlySalesVolume,
       live,
       training,
       divergences,
