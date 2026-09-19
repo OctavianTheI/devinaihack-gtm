@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   try {
     guardTrainingRequest(request, "score", Number(process.env.TRAINING_SCORE_RATE_LIMIT) || 6);
     const input = await readTrainingBody(request, scoreRequestSchema);
-    if (!getRep(input.repId, "live")) throw new TrainingRequestError("Unknown repId", 404);
+    if (!(await getRep(input.repId, "live"))) throw new TrainingRequestError("Unknown repId", 404);
     if (input.transcript.some((turn) => turn.atSec > input.durationSec + 1)) throw new TrainingRequestError("Transcript timestamps exceed the session duration");
     const key = process.env.SCORER_API_KEY ?? process.env.OPENAI_API_KEY;
     const useRubricAdapter = Boolean(key && process.env.SCORER_MODEL === PLAIN_JSON_MODEL);

@@ -11,8 +11,7 @@ function parseSource(value: string | null): DataSource {
 // average for that same source (so the frontend doesn't recompute it).
 export async function GET(req: NextRequest) {
   const source = parseSource(req.nextUrl.searchParams.get("source"));
-  const reps = listReps(source);
-  const average = teamAverage(source);
+  const [reps, average] = await Promise.all([listReps(source), teamAverage(source)]);
   return NextResponse.json(
     { source, reps, teamAverage: average },
     { headers: { "Cache-Control": "no-store" } }
