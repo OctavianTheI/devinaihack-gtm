@@ -1,0 +1,173 @@
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  font-family: system-ui, sans-serif;
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  flex-wrap: wrap;
+}
+
+.repPicker {
+  font-size: 14px;
+  color: #444;
+}
+
+.repPicker select {
+  margin-left: 4px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eee;
+}
+
+.intro,
+.pitch {
+  background: #dbeafe;
+}
+
+.objections {
+  background: #fef3c7;
+}
+
+.won {
+  background: #d1fae5;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.timer {
+  font-variant-numeric: tabular-nums;
+  color: #666;
+}
+
+.play {
+  margin-left: auto;
+  padding: 10px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+}
+
+.hangup {
+  margin-left: auto;
+  padding: 10px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #fff;
+  cursor: pointer;
+}
+
+.error {
+  font-size: 14px;
+}
+
+.transcript {
+  margin-top: 24px;
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.rep {
+  color: #1d4ed8;
+}
+
+.customer {
+  color: #374151;
+}
+
+.results {
+  margin-top: 24px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.results h2 {
+  margin-top: 0;
+}
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.scoreLabel {
+  width: 140px;
+}
+
+.scoreTrack {
+  flex: 1;
+  height: 8px;
+  background: #eee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.scoreFill {
+  height: 100%;
+  background: #2563eb;
+}
+
+.scoreValue {
+  width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary {
+  font-size: 14px;
+  color: #444;
+}
+
+.divergences {
+  font-size: 14px;
+  padding-left: 18px;
+  color: #444;
+}
